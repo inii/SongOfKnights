@@ -1,4 +1,4 @@
-﻿using Codice.CM.WorkspaceServer.Tree.GameUI.Checkin.Updater;
+using Codice.CM.WorkspaceServer.Tree.GameUI.Checkin.Updater;
 using NUnit.Framework;
 using System.Collections.Generic;
 using System.IO;

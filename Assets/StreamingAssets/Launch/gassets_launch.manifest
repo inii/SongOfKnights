@@ -27,4 +27,4 @@ SerializeReferenceClassIdentifiers: []
 Assets:
 - Assets/GAssets/Launch/Sphere.prefab
 Dependencies:
-- D:/toji/unity/SongOfKnight/Assets/StreamingAssets/Launch/gassets_launch_mat
+- D:/toji/unity/SongOfKnights/Assets/StreamingAssets/Launch/gassets_launch_mat

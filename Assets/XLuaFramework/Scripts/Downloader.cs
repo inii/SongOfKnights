@@ -1,26 +1,40 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Networking;
 
 /// <summary>
-/// ÏÂÔØÆ÷ ¹¤¾ßÀà
+/// ä¸‹è½½å™¨ å·¥å…·ç±»
 /// </summary>
 public class Downloader : Singleton<Downloader>
 {
     /// <summary>
-    /// ¸ù¾İÄ£¿éµÄÅäÖÃ£¬ÏÂÔØ¶ÔÓ¦µÄÄ£¿é
+    /// æ ¹æ®æ¨¡å—çš„é…ç½®ï¼Œä¸‹è½½å¯¹åº”çš„æ¨¡å—
     /// </summary>
-    /// <param name="moduleConfig">Ä£¿éµÄÅäÖÃ¶ÔÏó</param>
-    /// <param name="action"> ÏÂÔØÍêºóµÄ»Øµ÷º¯Êı£¬»Øµ÷²ÎÊı±íÊöÏÂÔØÊÇ·ñ³É¹¦ </param>
-    public void Download(ModuleConfig moduleConfig, Action<bool> action)
+    /// <param name="moduleConfig">æ¨¡å—çš„é…ç½®å¯¹è±¡</param>
+    /// <param name="action"> ä¸‹è½½å®Œåçš„å›è°ƒå‡½æ•°ï¼Œå›è°ƒå‚æ•°è¡¨è¿°ä¸‹è½½æ˜¯å¦æˆåŠŸ </param>
+    public async Task<bool> Download(ModuleConfig moduleConfig)
     {
-        
+        UnityWebRequest request = UnityWebRequest.Get("test_url");
+        await request.SendWebRequest();
+
+        if (string.IsNullOrEmpty(request.error))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     // Update is called once per frame
     void Update()
     {
-        
+
     }
 }
+
+
+

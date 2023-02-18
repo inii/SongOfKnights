@@ -3,7 +3,7 @@ using UnityEngine;
 
 public class Main : MonoBehaviour
 {
-    private void Awake()
+    private async void Awake()
     {
         InitGlobal();
 
@@ -14,23 +14,32 @@ public class Main : MonoBehaviour
             moduleUrl = "http://192.168.0.7:8000",
         };
 
-        ModuleManager.Instance.Load(launchModule, (success) =>
+        //ModuleManager.Instance.Load(launchModule, (success) =>
+        //{
+        //    // 鍦ㄨ繖涓噷鎶婁唬鐮佹帶鍒舵潈浜ょ粰Lua 
+        //    Debug.Log("Lua start...");
+        //});
+
+        bool result = await ModuleManager.Instance.Load(launchModule);
+        if (result == true)
         {
-            // 在这个里把代码控制权交给Lua 
+            //鍦ㄨ繖涓噷鎶婁唬鐮佹帶鍒舵潈浜ょ粰Lua
             Debug.Log("Lua start...");
-        });
+            AssetLoader.Instance.Clone("Launch", "Assets/GAssets/Launch/Sphere.prefab");
+        }
+        
     }
 
     private void InitGlobal()
     {
         Instance = this;
-        GlobalConfig.HotUpdate= false;
-        GlobalConfig.BundleMode= false;
+        GlobalConfig.HotUpdate = false;
+        GlobalConfig.BundleMode = false;
         DontDestroyOnLoad(gameObject);
     }
 
     /// <summary>
-    /// 主Mono对象
+    /// 涓籑ono瀵硅薄
     /// </summary>
     public static Main Instance;
 

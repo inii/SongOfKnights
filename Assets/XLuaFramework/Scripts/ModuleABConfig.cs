@@ -3,57 +3,57 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Ò»¸öBundleÊı¾İ ¡¾ÓÃÓÚĞòÁĞ»¯jsonÎÄ¼ş¡¿
+/// ä¸€ä¸ªBundleæ•°æ® ã€ç”¨äºåºåˆ—åŒ–jsonæ–‡ä»¶ã€‘
 /// </summary>
 public class BundleInfo
 {
     /// <summary>
-    /// Õâ¸öbundleµÄÃû×Ö
+    /// è¿™ä¸ªbundleçš„åå­—
     /// </summary>
     public string bundle_name;
 
     /// <summary>
-    /// Õâ¸öbundle×ÊÔ´µÄcrcÉ¢ÁĞ±í
+    /// è¿™ä¸ªbundleèµ„æºçš„crcæ•£åˆ—è¡¨
     /// </summary>
     public string crc; 
 
     /// <summary>
-    /// Õâ¸öbundleËù°üº¬µÄ×ÊÔ´µÄÂ·¾¶ÁĞ±í
+    /// è¿™ä¸ªbundleæ‰€åŒ…å«çš„èµ„æºçš„è·¯å¾„åˆ—è¡¨
     /// </summary>
     public List<string> assets;
 }
 
 
 /// <summary>
-///  Ò»¸öAssetÊı¾İ ¡¾ÓÃÓÚĞòÁĞ»¯ÎªjsonÎÄ¼ş¡¿
+///  ä¸€ä¸ªAssetæ•°æ® ã€ç”¨äºåºåˆ—åŒ–ä¸ºjsonæ–‡ä»¶ã€‘
 /// </summary>
 public class AssetInfo
 {
     /// <summary>
-    /// Õâ¸ö×ÊÔ´µÄÏà¶ÔÂ·¾¶
+    /// è¿™ä¸ªèµ„æºçš„ç›¸å¯¹è·¯å¾„
     /// </summary>
     public string asset_path;
 
     /// <summary>
-    /// Õâ¸ö×ÊÔ´ËùÊôµÄAssetBundleµÄÃû×Ö
+    /// è¿™ä¸ªèµ„æºæ‰€å±çš„AssetBundleçš„åå­—
     /// </summary>
     public string bundle_name;
 
     /// <summary>
-    /// Õâ¸ö×ÊÔ´ËùÒÀÀµµÄAssetBundleÁĞ±íµÄÃû×Ö
+    /// è¿™ä¸ªèµ„æºæ‰€ä¾èµ–çš„AssetBundleåˆ—è¡¨çš„åå­—
     /// </summary>
     public List<string> dependencies;
 
 }
 
 /// <summary>
-/// ModuleABConfig¶ÔÏó ¶ÔÓ¦Õû¸öµ¥¸öÄ£¿éµÄjsonÎÄ¼ş 
+/// ModuleABConfigå¯¹è±¡ å¯¹åº”æ•´ä¸ªå•ä¸ªæ¨¡å—çš„jsonæ–‡ä»¶ 
 /// </summary>
 public class ModuleABConfig
 {
 
     /// <summary>
-    /// key: AssetBundleµÄÃû×Ö
+    /// key: AssetBundleçš„åå­—
     /// </summary>
     public Dictionary<string, BundleInfo> BundleArray;
 
@@ -67,10 +67,10 @@ public class ModuleABConfig
     }
 
     /// <summary>
-    /// ĞÂÔöÒ»¸öbundle¼ÇÂ¼
+    /// æ–°å¢ä¸€ä¸ªbundleè®°å½•
     /// </summary>
-    /// <param name="bundleName">bundleµÄid</param>
-    /// <param name="bundleInfo">bundleµÄ¶ÔÏó</param>
+    /// <param name="bundleName">bundleçš„id</param>
+    /// <param name="bundleInfo">bundleçš„å¯¹è±¡</param>
     public void AddBundle(string bundleName, BundleInfo bundleInfo)
     {
         BundleArray[bundleName] = bundleInfo;

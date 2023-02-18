@@ -7,14 +7,14 @@ using System.Text;
 using System;
 
 /// <summary>
-/// ×ÊÔ´¹ÜÀíÏà¹ØµÄ¹¤¾ßº¯Êı
+/// èµ„æºç®¡ç†ç›¸å…³çš„å·¥å…·å‡½æ•°
 /// </summary>
 public static class AssetUtility
 {
     private static readonly CRC32 crc32 = new CRC32();
 
     /// <summary>
-    /// ¼ÆËãÒ»¸öStream¶ÔÏóµÄCRC32É¢ÁĞÂë
+    /// è®¡ç®—ä¸€ä¸ªStreamå¯¹è±¡çš„CRC32æ•£åˆ—ç 
     /// </summary>
     /// <param name="input"></param>
     /// <returns></returns>
