@@ -2,9 +2,10 @@
     "BundleArray": {
         "gassets_launch": {
             "bundle_name": "gassets_launch",
-            "crc": "a72697bf",
+            "crc": "d3f1c942",
             "assets": [
-                "Assets/GAssets/Launch/Sphere.prefab"
+                "Assets/GAssets/Launch/Sphere.prefab",
+                "Assets/GAssets/Launch/TestSpriteRenderer.prefab"
             ]
         },
         "gassets_launch_mat": {
@@ -12,6 +13,13 @@
             "crc": "e30068f8",
             "assets": [
                 "Assets/GAssets/Launch/Mat/TestMaterial.mat"
+            ]
+        },
+        "gassets_launch_sprite": {
+            "bundle_name": "gassets_launch_sprite",
+            "crc": "b6b9a2ef",
+            "assets": [
+                "Assets/GAssets/Launch/Sprite/1216.png"
             ]
         }
     },
@@ -24,8 +32,18 @@
             ]
         },
         {
+            "asset_path": "Assets/GAssets/Launch/TestSpriteRenderer.prefab",
+            "bundle_name": "gassets_launch",
+            "dependencies": []
+        },
+        {
             "asset_path": "Assets/GAssets/Launch/Mat/TestMaterial.mat",
             "bundle_name": "gassets_launch_mat",
+            "dependencies": []
+        },
+        {
+            "asset_path": "Assets/GAssets/Launch/Sprite/1216.png",
+            "bundle_name": "gassets_launch_sprite",
             "dependencies": []
         }
     ]

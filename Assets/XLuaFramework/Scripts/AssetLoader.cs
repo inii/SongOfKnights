@@ -268,4 +268,98 @@ class AssetLoader : Singleton<AssetLoader>
         return Application.streamingAssetsPath + "/" + moduleName + bundleName;
     }
 
+
+    /// <summary>
+    /// 创建资源对象，并将其赋值给游戏对象
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="moduleName"></param>
+    /// <param name="assetPath"></param>
+    /// <param name="gameObject"></param>
+    /// <returns></returns>
+    public T CreateAsset<T>(string moduleName, string assetPath, GameObject gameObject) where T : UnityEngine.Object
+    {
+        if (typeof(T) == typeof(GameObject) || (!string.IsNullOrEmpty(assetPath) && assetPath.EndsWith(".prefab")))
+        {
+            Debug.LogError("不可以下载GameObject类型，请直接使用AssetLoader.Instance.Clone接口,path:" + assetPath);
+            return null;
+        }
+
+        if(gameObject == null)
+        {
+            Debug.LogError("CreateAsset必须传递一个gameObject其将要被挂载的GameObject对象！");
+            return null;    
+        }
+
+        AssetRef assetRef = LoadAssetRef<T>(moduleName, assetPath);
+        if(assetRef==null || assetRef.asset == null)
+        {
+            return null;
+        }
+
+        if(assetRef.children == null)
+        {
+            assetRef.children = new List<GameObject> ();
+        }
+
+        assetRef.children.Add(gameObject);
+
+        return assetRef.asset as T;
+    }
+
+
+    public void Unload(Dictionary<string, Hashtable> module2Assets)
+    {
+        foreach (string moduleName in module2Assets.Keys)
+        {
+            Hashtable path2AssetRef = module2Assets[moduleName];
+            if (path2AssetRef == null)
+            {
+                continue;
+            }
+
+            foreach (AssetRef assetRef in path2AssetRef.Values)
+            {
+                if(assetRef.children == null || assetRef.children.Count == 0)
+                {
+                    continue;
+                }
+
+                for (int i = assetRef.children.Count-1; i >= 0; i--)
+                {
+                    GameObject go = assetRef.children[i];   
+                    if(go==null)
+                    {
+                        assetRef.children.RemoveAt(i);  
+                    }
+                }
+
+                // 如果这个资源assetRef已经没有被任何GameObject依赖，那么此AssetRef就可以卸载了
+                if(assetRef.children.Count == 0)
+                {
+                    assetRef.asset = null;
+                    Resources.UnloadUnusedAssets();
+
+                    // 对于assetRef所属的这个bundle，解除关系
+                    assetRef.bundleRef.children.Remove(assetRef);
+                    if(assetRef.bundleRef.children.Count == 0)
+                    {
+                        assetRef.bundleRef.bundle.Unload(true);
+                    }
+
+                    //对于assetRef所依赖的那些bundle列表，解除关系
+                    foreach (BundleRef bundleRef in assetRef.dependencies)
+                    {
+                        bundleRef.children.Remove(assetRef);
+                        if (bundleRef.children.Count==0)
+                        {
+                            bundleRef.bundle.Unload(true);  
+                        }
+                    }
+                }
+
+            }
+
+        }
+    }
 }
