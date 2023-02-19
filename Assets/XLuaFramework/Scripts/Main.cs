@@ -11,7 +11,7 @@ public class Main : MonoBehaviour
         {
             moduleName = "Launch",
             moduleVersion = "20230101",
-            moduleUrl = "http://192.168.0.7:8000",
+            moduleUrl = "http://192.168.12.179:8000/",
         };
 
         //ModuleManager.Instance.Load(launchModule, (success) =>
@@ -37,8 +37,8 @@ public class Main : MonoBehaviour
     private void InitGlobal()
     {
         Instance = this;
-        GlobalConfig.HotUpdate = false;
-        GlobalConfig.BundleMode = false;
+        GlobalConfig.HotUpdate = true;
+        GlobalConfig.BundleMode = true;
         DontDestroyOnLoad(gameObject);
     }
 

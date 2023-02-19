@@ -31,6 +31,14 @@ public static class GlobalConfig
 public class ModuleConfig
 {
     /// <summary>
+    /// 模块资源在远程服务器上的基础地址
+    /// </summary>
+    public string DownloadURL
+    {
+        get { return moduleUrl + "/" + moduleName + "/" + moduleVersion; }
+    }
+
+    /// <summary>
     /// 模块的名字
     /// </summary>
     public string moduleName;
@@ -44,4 +52,20 @@ public class ModuleConfig
     /// 模块的热更服务器的地址
     /// </summary>
     public string moduleUrl;
+}
+
+/// <summary>
+/// 选择原始只读路径还是可读写路径
+/// </summary>
+public enum BaseOrUpdate
+{
+    /// <summary>
+    /// APP安装时，生成的原始制度路径
+    /// </summary>
+    Base,
+
+    /// <summary>
+    /// APP提供的 可读写路径
+    /// </summary>
+    Update,
 }

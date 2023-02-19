@@ -58,7 +58,8 @@ public class ModuleABConfig
     public Dictionary<string, BundleInfo> BundleArray;
 
     public AssetInfo[] AssetArray;
-    //public ModuleABConfig() { }
+
+    public ModuleABConfig() { }
 
     public ModuleABConfig(int assetCount)
     {

@@ -1,11 +1,20 @@
 using LitJson;
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Networking;
+
+/**
+ *   不管是win还是Android或者ios，都有两个资源路径
+ *   1.app安装时生产的资源只读路径Base，（unity中是以Application.streamingAssetsPath开头的路径)
+ *   2.另一个是app提供的可读写路径Updata, (unity中是以Application.persistentDataPath开头的路径)
+ *   
+ *   对于资源的加载，我们要有限查找Updata，如果存在直接加载返回，否则查找Base
+ **/
+
+
 /// <summary>
 /// 模块资源加载器
 /// </summary>
@@ -15,27 +24,11 @@ class AssetLoader : Singleton<AssetLoader>
     /// 加载模块对应的全局AssetBundle资源管理器
     /// </summary>
     /// <param name="moduleName">模块的名字</param>
-    public async Task<ModuleABConfig> LoadAssetBundleConfig(string moduleName)
+    public async Task<ModuleABConfig> LoadAssetBundleConfig(BaseOrUpdate baseOrUpdate, string moduleName, string bundleConfigName)
     {
-#if UNITY_EDIROT
-        if (GlobalConfig.BundleMode == false)
-        {
-            return null;
-        }
-        else
-        {
-            return await LoadAssetBundleConfig_Runtime(moduleName);
-        }
-#else
-        return await LoadAssetBundleConfig_Runtime(moduleName);
-#endif
-
-    }
-
-    public async Task<ModuleABConfig> LoadAssetBundleConfig_Runtime(string moduleName)
-    {
-        string url = Application.streamingAssetsPath + "/" + moduleName + "/" + moduleName.ToLower() + ".json";
+        string url = BundlePath(baseOrUpdate, moduleName, bundleConfigName);
         UnityWebRequest request = UnityWebRequest.Get(url);
+
         await request.SendWebRequest();
 
         if (string.IsNullOrEmpty(request.error) == true)
@@ -54,11 +47,17 @@ class AssetLoader : Singleton<AssetLoader>
     public Dictionary<string, Hashtable> base2Assets;
 
     /// <summary>
+    /// 平台对应的可读写路径
+    /// </summary>
+    public Dictionary<string, Hashtable> update2Assets;
+
+    /// <summary>
     /// 模块资源加载器的构造函数
     /// </summary>
     public AssetLoader()
     {
         base2Assets = new Dictionary<string, Hashtable>();
+        update2Assets = new Dictionary<string, Hashtable>();
     }
     /// <summary>
     /// 通过模块的AB资源json配置文件 创建内存中的资源容器，并且这个函数还返回了这个模块对应的容器！
@@ -136,8 +135,6 @@ class AssetLoader : Singleton<AssetLoader>
     /// <returns></returns>
     private AssetRef LoadAssetRef<T>(string moduelName, string assetPath) where T : UnityEngine.Object
     {
-
-
 #if UNITY_EDITOR
         if (GlobalConfig.BundleMode == false)
         {
@@ -150,7 +147,6 @@ class AssetLoader : Singleton<AssetLoader>
 #else
         return LoadAssetRef_Runtime<T>(moduelName, assetPath);  
 #endif
-
     }
 
     /// <summary>
@@ -192,12 +188,20 @@ class AssetLoader : Singleton<AssetLoader>
             return null;
         }
 
+        // 先查找update路径下的容器， 在查找base路径下的容器
+        BaseOrUpdate baseOrUpdate = BaseOrUpdate.Update;
+
         Hashtable module2AssetRef;
-        bool moduleExsit = base2Assets.TryGetValue(moduleName, out module2AssetRef);
-        if (moduleExsit == false)
+        bool isExsitModule = update2Assets.TryGetValue(moduleName, out module2AssetRef);
+        if (isExsitModule == false)
         {
-            Debug.LogError("未找到资源对应的模块：moduleName " + moduleName + " assetPath" + assetPath);
-            return null;
+            baseOrUpdate = BaseOrUpdate.Base;
+            isExsitModule = base2Assets.TryGetValue(moduleName, out module2AssetRef);
+            if (isExsitModule == false)
+            {
+                Debug.LogError("未找到资源对应的模块：moduleName " + moduleName + " assetPath" + assetPath);
+                return null;
+            }
         }
 
         AssetRef assetRef = (AssetRef)module2AssetRef[assetPath];
@@ -217,7 +221,7 @@ class AssetLoader : Singleton<AssetLoader>
         {
             if (oneBundleRef.bundle == null)
             {
-                string bundlePath = BundlePath(moduleName, oneBundleRef.bundleInfo.bundle_name);
+                string bundlePath = BundlePath(baseOrUpdate, moduleName, oneBundleRef.bundleInfo.bundle_name);
                 oneBundleRef.bundle = AssetBundle.LoadFromFile(bundlePath);
             }
 
@@ -229,11 +233,11 @@ class AssetLoader : Singleton<AssetLoader>
             oneBundleRef.children.Add(assetRef);
         }
 
-        // 2.处理assetRef属于的八个BundleRef对象
+        // 2.处理assetRef属于的那个BundleRef对象
         BundleRef bundleRef = assetRef.bundleRef;
         if (bundleRef.bundle == null)
         {
-            bundleRef.bundle = AssetBundle.LoadFromFile(BundlePath(moduleName, bundleRef.bundleInfo.bundle_name));
+            bundleRef.bundle = AssetBundle.LoadFromFile(BundlePath(baseOrUpdate, moduleName, bundleRef.bundleInfo.bundle_name));
         }
 
         if (bundleRef.children == null)
@@ -263,9 +267,16 @@ class AssetLoader : Singleton<AssetLoader>
     /// <param name="moduleName"></param>
     /// <param name="bundleName"></param>
     /// <returns></returns>
-    private string BundlePath(string moduleName, string bundleName)
+    private string BundlePath(BaseOrUpdate baseOrUpdate, string moduleName, string bundleName)
     {
-        return Application.streamingAssetsPath + "/" + moduleName + bundleName;
+        if (baseOrUpdate == BaseOrUpdate.Update)
+        {
+            return Application.persistentDataPath + "/Bundles/" + moduleName + "/" + bundleName;
+        }
+        else
+        {
+            return Application.streamingAssetsPath + "/" + moduleName + "/" + bundleName;
+        }
     }
 
 
@@ -285,21 +296,21 @@ class AssetLoader : Singleton<AssetLoader>
             return null;
         }
 
-        if(gameObject == null)
+        if (gameObject == null)
         {
             Debug.LogError("CreateAsset必须传递一个gameObject其将要被挂载的GameObject对象！");
-            return null;    
+            return null;
         }
 
         AssetRef assetRef = LoadAssetRef<T>(moduleName, assetPath);
-        if(assetRef==null || assetRef.asset == null)
+        if (assetRef == null || assetRef.asset == null)
         {
             return null;
         }
 
-        if(assetRef.children == null)
+        if (assetRef.children == null)
         {
-            assetRef.children = new List<GameObject> ();
+            assetRef.children = new List<GameObject>();
         }
 
         assetRef.children.Add(gameObject);
@@ -320,29 +331,29 @@ class AssetLoader : Singleton<AssetLoader>
 
             foreach (AssetRef assetRef in path2AssetRef.Values)
             {
-                if(assetRef.children == null || assetRef.children.Count == 0)
+                if (assetRef.children == null || assetRef.children.Count == 0)
                 {
                     continue;
                 }
 
-                for (int i = assetRef.children.Count-1; i >= 0; i--)
+                for (int i = assetRef.children.Count - 1; i >= 0; i--)
                 {
-                    GameObject go = assetRef.children[i];   
-                    if(go==null)
+                    GameObject go = assetRef.children[i];
+                    if (go == null)
                     {
-                        assetRef.children.RemoveAt(i);  
+                        assetRef.children.RemoveAt(i);
                     }
                 }
 
                 // 如果这个资源assetRef已经没有被任何GameObject依赖，那么此AssetRef就可以卸载了
-                if(assetRef.children.Count == 0)
+                if (assetRef.children.Count == 0)
                 {
                     assetRef.asset = null;
                     Resources.UnloadUnusedAssets();
 
                     // 对于assetRef所属的这个bundle，解除关系
                     assetRef.bundleRef.children.Remove(assetRef);
-                    if(assetRef.bundleRef.children.Count == 0)
+                    if (assetRef.bundleRef.children.Count == 0)
                     {
                         assetRef.bundleRef.bundle.Unload(true);
                     }
@@ -351,9 +362,9 @@ class AssetLoader : Singleton<AssetLoader>
                     foreach (BundleRef bundleRef in assetRef.dependencies)
                     {
                         bundleRef.children.Remove(assetRef);
-                        if (bundleRef.children.Count==0)
+                        if (bundleRef.children.Count == 0)
                         {
-                            bundleRef.bundle.Unload(true);  
+                            bundleRef.bundle.Unload(true);
                         }
                     }
                 }

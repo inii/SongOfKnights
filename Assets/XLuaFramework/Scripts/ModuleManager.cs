@@ -21,55 +21,53 @@ public class ModuleManager : Singleton<ModuleManager>
             }
             else
             {
-                ModuleABConfig moduleABConfig = await AssetLoader.Instance.LoadAssetBundleConfig(moduleConfig.moduleName);
-                if (moduleABConfig == null)
-                {
-                    return false;
-                }
-
-                Debug.Log("模块包含AB包总数量：" + moduleABConfig.BundleArray.Count);
-                Hashtable path2AssetRef = AssetLoader.Instance.ConfigAssembly(moduleABConfig);
-                AssetLoader.Instance.base2Assets.Add(moduleConfig.moduleName, path2AssetRef);
-
-                return true;
+                return await LoadBase(moduleConfig.moduleName);
             }
         }
         else
         {
-            return await Downloader.Instance.Download(moduleConfig);
-            //Downloader.Instance.Download(moduleConfig, (downloadResult) =>
-            //{
-            //    if (downloadResult == true)
-            //    {
-            //        if (GlobalConfig.BundleMode == true)
-            //        {
-            //            LoadAssetBundleConfig(moduleConfig, moduleAction);
-            //        }
-            //        else
-            //        {
-            //            Debug.LogError("配置错误(config error)！ HotUpdate == true && BundleMode == false");
-            //        }
-            //    }
-            //    else
-            //    {
-            //        Debug.LogError($"下载失败， Unable to download ");
-            //    }
-            //});
+            if(await Downloader.Instance.Download(moduleConfig) == false)
+            {
+                return false;
+            }
+
+            bool baseOk = await LoadBase(moduleConfig.moduleName);
+            bool updateOk = await LoadUpdate(moduleConfig.moduleName);  
+            if (baseOk == false && updateOk == false) { 
+            return false;
+            }
+
+            return true;
         }
     }
 
-    //private async Task<bool> LoadAssetBundleConfig(ModuleConfig moduleConfig)
-    //{
-    //    AssetLoader.Instance.LoadAssetBundleConfig(moduleConfig.moduleName, (assetConfigResult) =>
-    //    {
-    //        if (assetConfigResult == true)
-    //        {
-    //            moduleAction(true);
-    //        }
-    //        else
-    //        {
-    //            Debug.LogError("LoadAssetBundleConfig出错！");
-    //        }
-    //    });
-    //}
+    private async Task<bool> LoadUpdate(string moduleName)
+    {
+        ModuleABConfig moduleABConfig = await AssetLoader.Instance.LoadAssetBundleConfig(BaseOrUpdate.Update, moduleName, moduleName.ToLower()+".json");
+        if(moduleABConfig == null)
+        {
+            return false;
+        }
+
+        Hashtable path2AssetRef = AssetLoader.Instance.ConfigAssembly(moduleABConfig);
+        AssetLoader.Instance.update2Assets.Add(moduleName, path2AssetRef);
+
+        return true;
+    }
+
+    private async Task<bool> LoadBase(string moduleName)
+    {
+        ModuleABConfig moduleABConfig = await AssetLoader.Instance.LoadAssetBundleConfig(BaseOrUpdate.Base, moduleName, moduleName.ToLower() + ".json");
+        if(moduleABConfig == null)
+        {
+            return false;
+        }
+
+        Debug.Log($"模块{moduleName}的只读路径包含的AB包总数量:{moduleABConfig.BundleArray.Count}");
+        Hashtable path2AssetRef = AssetLoader.Instance.ConfigAssembly(moduleABConfig);
+        AssetLoader.Instance.base2Assets.Add(moduleName, path2AssetRef);
+        return true;
+    }
+
+
 }
