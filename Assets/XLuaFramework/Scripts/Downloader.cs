@@ -45,13 +45,25 @@ public class Downloader : Singleton<Downloader>
 
         if (string.IsNullOrEmpty(request.error) == false)
         {
+            Debug.LogError($"下载模块{moduleConfig.moduleName}的AB配置文件：{request.error}");
             return false;
         }
 
         List<BundleInfo> downLoadList = await GetDownloadList(moduleConfig.moduleName);
+
+        long downloadSize = CalculateSize(downLoadList);
+        if (downloadSize == 0) { return true; }
+
+        bool boxResult = await ShowMessageBox(moduleConfig, downloadSize);
+        if (boxResult == false)
+        {
+            Application.Quit();
+            return false;
+        }
+
         List<BundleInfo> remainList = await ExecuteDownload(moduleConfig, downLoadList);
 
-        if (remainList.Count == 0) { return false; }
+        if (remainList.Count > 0) { return false; }
 
         return true;
     }
@@ -194,9 +206,63 @@ public class Downloader : Singleton<Downloader>
         return Application.persistentDataPath + "/Bundles/" + moduleName;
     }
 
+    /// <summary>
+    /// 计算需要下载的资源大小 单位是字节
+    /// </summary>
+    /// <param name="bundleList"></param>
+    /// <returns></returns>
+    private static long CalculateSize(List<BundleInfo> bundleList)
+    {
+        long totalSize = 0;
 
+        foreach (BundleInfo bundleInfo in bundleList)
+        {
+            totalSize += bundleInfo.size;
+        }
 
+        return totalSize;
+    }
 
+    private static async Task<bool> ShowMessageBox(ModuleConfig moduleConfig, long totalSize)
+    {
+        string downLoadSize = SizeToString(totalSize);
+        string messageStr = $"发现新版本， 版本号为：{moduleConfig.moduleVersion}\n需要下载热更新包，大小为：{downLoadSize}";
+        MessageBox messageBox = new MessageBox(messageStr, "开始下载", "推出游戏");
+        MessageBox.BoxResult result = await messageBox.GetReplyAsync();
+        messageBox.Close();
+
+        return result == MessageBox.BoxResult.First;
+    }
+
+    /// <summary>
+    /// 工具函数 把字节数换成字符串形式
+    /// </summary>
+    /// <param name="totalSize"></param>
+    /// <returns></returns>
+    /// <exception cref="NotImplementedException"></exception>
+    private static string SizeToString(long size)
+    {
+        string sizeStr = "";
+        long border = 1024 * 1024;
+        if (size >= border)
+        {
+            long m = size / border;
+            size %= border;
+            sizeStr += $"{m}[M]";
+        }
+
+        if (size >= 1024)
+        {
+            long k = size / 1024;
+            size %= 1024;
+            sizeStr += $"{k}[K]";
+        }
+
+        long b = size;
+        sizeStr += $"{b}[B]";
+
+        return sizeStr;
+    }
 }
 
 

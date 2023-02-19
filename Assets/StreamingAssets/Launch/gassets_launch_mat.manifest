@@ -1,0 +1,19 @@
+ManifestFileVersion: 0
+CRC: 4041366624
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: 693b8253d23c64006839b346035991c9
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: 5651999fa58938ac55fc849c3d2539bc
+HashAppended: 0
+ClassTypes:
+- Class: 21
+  Script: {instanceID: 0}
+- Class: 48
+  Script: {instanceID: 0}
+SerializeReferenceClassIdentifiers: []
+Assets:
+- Assets/GAssets/Launch/Mat/TestMaterial.mat
+Dependencies: []

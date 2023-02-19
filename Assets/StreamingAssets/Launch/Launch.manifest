@@ -1,0 +1,14 @@
+ManifestFileVersion: 0
+CRC: 1925374099
+AssetBundleManifest:
+  AssetBundleInfos:
+    Info_0:
+      Name: gassets_launch
+      Dependencies:
+        Dependency_0: gassets_launch_mat
+    Info_1:
+      Name: gassets_launch_mat
+      Dependencies: {}
+    Info_2:
+      Name: gassets_launch_sprite
+      Dependencies: {}

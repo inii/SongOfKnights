@@ -1,0 +1,35 @@
+ManifestFileVersion: 0
+CRC: 422978463
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: af9764f640c38a8201b2d5db1daaac8f
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: 2a34565056e0726d51646e25bc2145b0
+HashAppended: 0
+ClassTypes:
+- Class: 1
+  Script: {instanceID: 0}
+- Class: 4
+  Script: {instanceID: 0}
+- Class: 21
+  Script: {instanceID: 0}
+- Class: 23
+  Script: {instanceID: 0}
+- Class: 33
+  Script: {instanceID: 0}
+- Class: 43
+  Script: {instanceID: 0}
+- Class: 48
+  Script: {instanceID: 0}
+- Class: 135
+  Script: {instanceID: 0}
+- Class: 212
+  Script: {instanceID: 0}
+SerializeReferenceClassIdentifiers: []
+Assets:
+- Assets/GAssets/Launch/TestSpriteRenderer.prefab
+- Assets/GAssets/Launch/Sphere.prefab
+Dependencies:
+- D:/toji/unity/SongOfKnights/Assets/StreamingAssets/Launch/gassets_launch_mat
