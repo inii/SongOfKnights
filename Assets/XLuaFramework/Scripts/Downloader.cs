@@ -1,10 +1,12 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics.SymbolStore;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.Rendering;
@@ -23,18 +25,17 @@ using UnityEngine.Rendering;
 public class Downloader : Singleton<Downloader>
 {
     /// <summary>
-    /// 根据模块的配置，下载对应的模块
+    /// 根据模块的配置，下载对应的模块(唯一对外API)
     /// </summary>
     /// <param name="moduleConfig">模块的配置对象</param>
     /// <param name="action"> 下载完后的回调函数，回调参数表述下载是否成功 </param>
-    public async Task<bool> Download(ModuleConfig moduleConfig)
+    public async Task Download(ModuleConfig moduleConfig)
     {
         // 用来存放热更新下来的资源 本地路径
         string updatePath = GetUpdatePath(moduleConfig.moduleName);
 
         // 远程服务器上这个模块的AB资源配置文件的URL
         string configURL = GetServerURL(moduleConfig, moduleConfig.moduleName.ToLower() + ".json");
-
 
         UnityWebRequest request = UnityWebRequest.Get(configURL);
 
@@ -46,26 +47,44 @@ public class Downloader : Singleton<Downloader>
         if (string.IsNullOrEmpty(request.error) == false)
         {
             Debug.LogError($"下载模块{moduleConfig.moduleName}的AB配置文件：{request.error}");
-            return false;
+
+            bool result = await ShowMessageBox("网络异常，请检查网络后点击【继续下载】", "继续下载", "退出游戏");
+            if (result == false)
+            {
+                Application.Quit();
+
+                return;
+            }
+
+            await Download(moduleConfig);
+
+            return;
         }
 
-        List<BundleInfo> downLoadList = await GetDownloadList(moduleConfig.moduleName);
+        Tuple<List<BundleInfo>, BundleInfo[]> tuple = await GetDownloadList(moduleConfig.moduleName);
+
+        List<BundleInfo> downLoadList = tuple.Item1;
+        BundleInfo[] removeList = tuple.Item2;
 
         long downloadSize = CalculateSize(downLoadList);
-        if (downloadSize == 0) { return true; }
+        if (downloadSize == 0)
+        {
+            Clear(moduleConfig, removeList);
+            return;
+        }
 
         bool boxResult = await ShowMessageBox(moduleConfig, downloadSize);
         if (boxResult == false)
         {
             Application.Quit();
-            return false;
+            return;
         }
 
-        List<BundleInfo> remainList = await ExecuteDownload(moduleConfig, downLoadList);
+        await ExecuteDownload(moduleConfig, downLoadList);
 
-        if (remainList.Count > 0) { return false; }
+        Clear(moduleConfig, removeList);
 
-        return true;
+        return;
     }
 
     /// <summary>
@@ -73,7 +92,7 @@ public class Downloader : Singleton<Downloader>
     /// </summary>
     /// <param name="moduleName"></param>
     /// <returns></returns>
-    private async Task<List<BundleInfo>> GetDownloadList(string moduleName)
+    private async Task<Tuple<List<BundleInfo>, BundleInfo[]>> GetDownloadList(string moduleName)
     {
         ModuleABConfig serverConfig = await AssetLoader.Instance.LoadAssetBundleConfig(BaseOrUpdate.Update, moduleName, moduleName.ToLower() + "_temp.json");
         if (serverConfig == null)
@@ -84,9 +103,7 @@ public class Downloader : Singleton<Downloader>
         ModuleABConfig localConfig = await AssetLoader.Instance.LoadAssetBundleConfig(BaseOrUpdate.Update, moduleName, moduleName.ToLower() + ".json");
         //这里不用判断localConfig是否存在 本地的localConfig确实可能不存在， 比如在此模块第一次热更新之前，本地模块啥都没有
 
-        List<BundleInfo> diffList = CalculateDiff(moduleName, localConfig, serverConfig);
-
-        return diffList;
+        return CalculateDiff(moduleName, localConfig, serverConfig);
     }
 
     /// <summary>
@@ -96,9 +113,12 @@ public class Downloader : Singleton<Downloader>
     /// <param name="localConfig"></param>
     /// <param name="serverConfig"></param>
     /// <returns></returns>
-    private List<BundleInfo> CalculateDiff(string moduleName, ModuleABConfig localConfig, ModuleABConfig serverConfig)
+    private Tuple<List<BundleInfo>, BundleInfo[]> CalculateDiff(string moduleName, ModuleABConfig localConfig, ModuleABConfig serverConfig)
     {
+        // 记录需要下载的bundle文件列表
         List<BundleInfo> bundleList = new List<BundleInfo>();
+
+        // 记录需要删除的本地bundle文件列表
         Dictionary<string, BundleInfo> localBundleDic = new Dictionary<string, BundleInfo>();
         if (localConfig != null)
         {
@@ -109,7 +129,8 @@ public class Downloader : Singleton<Downloader>
             }
         }
 
-        // 找到那些差异的bundle文件， 放到bundleList容器中
+        // 1.找到那些差异的bundle文件， 放到bundleList容器中
+        // 2.对于那些遗留在本地的无用bundle文件，把它过滤在localBundleDic容器里
         foreach (BundleInfo bundleInfo in serverConfig.BundleArray.Values)
         {
             string uniqueId = string.Format("{0}|{1}", bundleInfo.bundle_name, bundleInfo.crc);
@@ -124,29 +145,29 @@ public class Downloader : Singleton<Downloader>
         }
 
 
-        string updatePath = GetUpdatePath(moduleName);
+        //string updatePath = GetUpdatePath(moduleName);
 
         // 对于那些遗留在本地的无用bundle文件，要清除，不然本地文件越积累越多
         BundleInfo[] removeList = localBundleDic.Values.ToArray();
-        for (int i = removeList.Length - 1; i >= 0; i--)
-        {
-            BundleInfo bundleInfo = removeList[i];
-            string filePath = string.Format("{0}/" + bundleInfo.bundle_name, updatePath);
-            File.Delete(filePath);
-        }
+        //for (int i = removeList.Length - 1; i >= 0; i--)
+        //{
+        //    BundleInfo bundleInfo = removeList[i];
+        //    string filePath = string.Format("{0}/" + bundleInfo.bundle_name, updatePath);
+        //    File.Delete(filePath);
+        //}
 
-        //删除旧的配置文件
-        string oldFile = string.Format("{0}/{1}.json", updatePath, moduleName.ToLower());
-        if (File.Exists(oldFile))
-        {
-            File.Delete(oldFile);
-        }
+        ////删除旧的配置文件
+        //string oldFile = string.Format("{0}/{1}.json", updatePath, moduleName.ToLower());
+        //if (File.Exists(oldFile))
+        //{
+        //    File.Delete(oldFile);
+        //}
 
-        //用新的配置文件替代
-        string newFile = string.Format("{0}/{1}_temp.json", updatePath, moduleName.ToLower());
-        File.Move(newFile, oldFile);
+        ////用新的配置文件替代
+        //string newFile = string.Format("{0}/{1}_temp.json", updatePath, moduleName.ToLower());
+        //File.Move(newFile, oldFile);
 
-        return bundleList;
+        return new Tuple<List<BundleInfo>, BundleInfo[]>(bundleList, removeList);
     }
 
     /// <summary>
@@ -155,7 +176,7 @@ public class Downloader : Singleton<Downloader>
     /// <param name="moduleConfig"></param>
     /// <param name="bundleList"></param>
     /// <returns>返回的List是还未下载的Bundle</returns>
-    private async Task<List<BundleInfo>> ExecuteDownload(ModuleConfig moduleConfig, List<BundleInfo> bundleList)
+    private async Task ExecuteDownload(ModuleConfig moduleConfig, List<BundleInfo> bundleList)
     {
         while (bundleList.Count > 0)
         {
@@ -176,7 +197,19 @@ public class Downloader : Singleton<Downloader>
             }
         }
 
-        return bundleList;
+        if (bundleList.Count > 0)
+        {
+            bool result = await ShowMessageBox("网络异常，请检查网络后点击 继续下载", "继续下载", "退出游戏");
+            if (result == false)
+            {
+                Application.Quit();
+                return;
+            }
+        }
+
+        await ExecuteDownload(moduleConfig, bundleList);
+
+        return;
     }
 
     /// <summary>
@@ -234,6 +267,20 @@ public class Downloader : Singleton<Downloader>
         return result == MessageBox.BoxResult.First;
     }
 
+    private static async Task<bool> ShowMessageBox(string messageInfo, string first, string second)
+    {
+        MessageBox messageBox = new MessageBox(messageInfo, first, second);
+        MessageBox.BoxResult result = await messageBox.GetReplyAsync();
+        messageBox.Close();
+
+        if (result == MessageBox.BoxResult.First)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
     /// <summary>
     /// 工具函数 把字节数换成字符串形式
     /// </summary>
@@ -263,6 +310,33 @@ public class Downloader : Singleton<Downloader>
 
         return sizeStr;
     }
+
+    private void Clear(ModuleConfig moduleConfig, BundleInfo[] removeList)
+    {
+        string moduleName = moduleConfig.moduleName;
+        string updatePath = GetUpdatePath(moduleName);
+
+        //删除不需要的本地bundle文件列表
+        for (int i = 0; i < removeList.Length; i++)
+        {
+            BundleInfo bundleInfo = removeList[i];
+            string filePath = string.Format("{0}/{1}", updatePath, bundleInfo.bundle_name, moduleName);
+            File.Delete(filePath);
+        }
+
+        // 删除旧的配置文件
+        string oldFile = string.Format("{0}/{1}.json", updatePath, moduleName.ToLower());
+
+        if (File.Exists(oldFile)) File.Delete(oldFile);
+
+
+        // 用新的配置文件替代
+        string newFile = string.Format("{0}/{1}.json", updatePath, moduleName.ToLower());
+        File.Move(newFile, oldFile);
+    }
+
+
+
 }
 
 

@@ -36,7 +36,6 @@ public class MessageBox
         first.Find("Text").GetComponent<Text>().text = firstText;
         first.GetComponent<Button>().onClick.AddListener(() =>
         {
-            Debug.Log("clickc 11111111111111111111");
             Result = BoxResult.First;
         });
 
@@ -44,7 +43,6 @@ public class MessageBox
         second.Find("Text").GetComponent<Text>().text = secondText;
         second.GetComponent<Button>().onClick.AddListener(() =>
         {
-            Debug.Log("clickc 2222222222222222222222222");
             Result = BoxResult.Second;
         });
     }

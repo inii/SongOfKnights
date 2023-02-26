@@ -1,6 +1,4 @@
-using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 
 /// <summary>
 /// 一个Bundle数据 【用于序列化json文件】

@@ -21,6 +21,34 @@ using UnityEngine.Networking;
 class AssetLoader : Singleton<AssetLoader>
 {
     /// <summary>
+    /// 平台对应的只读路径下的资源
+    /// Key 模块名字
+    /// Value 模块所有的资源
+    /// </summary>
+    public Dictionary<string, Hashtable> base2Assets;
+
+    /// <summary>
+    /// 平台对应的可读写路径
+    /// </summary>
+    public Dictionary<string, Hashtable> update2Assets;
+
+    /// <summary>
+    /// 记录所有的BundleRef(不管是Base还是Update路径)
+    /// 键是bundle的名字
+    /// </summary>
+    public Dictionary<string, BundleRef> name2BundleRef;
+
+    /// <summary>
+    /// 模块资源加载器的构造函数
+    /// </summary>
+    public AssetLoader()
+    {
+        base2Assets = new Dictionary<string, Hashtable>();
+        update2Assets = new Dictionary<string, Hashtable>();
+        name2BundleRef = new Dictionary<string, BundleRef>();
+    }
+
+    /// <summary>
     /// 加载模块对应的全局AssetBundle资源管理器
     /// </summary>
     /// <param name="moduleName">模块的名字</param>
@@ -40,26 +68,6 @@ class AssetLoader : Singleton<AssetLoader>
     }
 
     /// <summary>
-    /// 平台对应的只读路径下的资源
-    /// Key 模块名字
-    /// Value 模块所有的资源
-    /// </summary>
-    public Dictionary<string, Hashtable> base2Assets;
-
-    /// <summary>
-    /// 平台对应的可读写路径
-    /// </summary>
-    public Dictionary<string, Hashtable> update2Assets;
-
-    /// <summary>
-    /// 模块资源加载器的构造函数
-    /// </summary>
-    public AssetLoader()
-    {
-        base2Assets = new Dictionary<string, Hashtable>();
-        update2Assets = new Dictionary<string, Hashtable>();
-    }
-    /// <summary>
     /// 通过模块的AB资源json配置文件 创建内存中的资源容器，并且这个函数还返回了这个模块对应的容器！
     /// base2Assets 这个成员变量，存放了所有模块的容器对象
     /// 这个字典的键就是模块的名字
@@ -69,14 +77,6 @@ class AssetLoader : Singleton<AssetLoader>
     /// <returns></returns>
     public Hashtable ConfigAssembly(ModuleABConfig moduleABConfig)
     {
-        Dictionary<string, BundleRef> name2BundleRef = new Dictionary<string, BundleRef>();
-        foreach (KeyValuePair<string, BundleInfo> keyValue in moduleABConfig.BundleArray)
-        {
-            string bundleName = keyValue.Key;
-            BundleInfo bundleInfo = keyValue.Value;
-            name2BundleRef[bundleName] = new BundleRef(bundleInfo);
-        }
-
         Hashtable path2AssetRef = new Hashtable();
         for (int i = 0; i < moduleABConfig.AssetArray.Length; i++)
         {
@@ -100,7 +100,6 @@ class AssetLoader : Singleton<AssetLoader>
 
         return path2AssetRef;
     }
-
 
     /// <summary>
     /// 克隆一个GameObject对象
@@ -188,21 +187,7 @@ class AssetLoader : Singleton<AssetLoader>
             return null;
         }
 
-        // 先查找update路径下的容器， 在查找base路径下的容器
-        BaseOrUpdate baseOrUpdate = BaseOrUpdate.Update;
-
-        Hashtable module2AssetRef;
-        bool isExsitModule = update2Assets.TryGetValue(moduleName, out module2AssetRef);
-        if (isExsitModule == false)
-        {
-            baseOrUpdate = BaseOrUpdate.Base;
-            isExsitModule = base2Assets.TryGetValue(moduleName, out module2AssetRef);
-            if (isExsitModule == false)
-            {
-                Debug.LogError("未找到资源对应的模块：moduleName " + moduleName + " assetPath" + assetPath);
-                return null;
-            }
-        }
+        Hashtable module2AssetRef = GlobalConfig.HotUpdate == true ? update2Assets[moduleName] : base2Assets[moduleName];
 
         AssetRef assetRef = (AssetRef)module2AssetRef[assetPath];
         if (assetRef == null)
@@ -221,7 +206,7 @@ class AssetLoader : Singleton<AssetLoader>
         {
             if (oneBundleRef.bundle == null)
             {
-                string bundlePath = BundlePath(baseOrUpdate, moduleName, oneBundleRef.bundleInfo.bundle_name);
+                string bundlePath = BundlePath(oneBundleRef.baseOrUpdate, moduleName, oneBundleRef.bundleInfo.bundle_name);
                 oneBundleRef.bundle = AssetBundle.LoadFromFile(bundlePath);
             }
 
@@ -237,7 +222,7 @@ class AssetLoader : Singleton<AssetLoader>
         BundleRef bundleRef = assetRef.bundleRef;
         if (bundleRef.bundle == null)
         {
-            bundleRef.bundle = AssetBundle.LoadFromFile(BundlePath(baseOrUpdate, moduleName, bundleRef.bundleInfo.bundle_name));
+            bundleRef.bundle = AssetBundle.LoadFromFile(BundlePath(bundleRef.baseOrUpdate, moduleName, bundleRef.bundleInfo.bundle_name));
         }
 
         if (bundleRef.children == null)

@@ -1,9 +1,8 @@
-using Codice.CM.WorkspaceServer.Tree.GameUI.Checkin.Updater;
-using NUnit.Framework;
+using LitJson;
+using Newtonsoft.Json;
+using System.Linq;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using Unity.Plastic.Newtonsoft.Json;
 using UnityEditor;
 using UnityEngine;
 
@@ -38,16 +37,114 @@ public class ABEditor : MonoBehaviour
     /// </summary>
     public static Dictionary<string, List<string>> asset2Dependencies = new Dictionary<string, List<string>>();
 
+    /// <summary>
+    /// 打正式大版本的版本资源
+    /// </summary>
+    [MenuItem("ABEditor/BuildAssetBundle_Base")]
+    public static void BuildAssetBundle_Base()
+    {
+        abOutputPath = Application.dataPath + "/../AssetBundle_Base";
+        BuildAssetBundle();
+    }
+
+    [MenuItem("ABEditor/BuildAssetBundle_Update")]
+    public static void BuildAssetBundle_Update()
+    {
+        // 1. 先把AssetBundle_Update文件夹中把AB包都生成出来
+        abOutputPath = Application.dataPath + "/../AssetBundle_Update";
+        BuildAssetBundle();
+
+        // 2. 在和AssetBundle_Base的版本进行比对，删除那些和AssetBundle_Base版本一样的资源
+        string baseABPath = Application.dataPath + "/../AssetBundle_Base";
+        string updateABPath = abOutputPath;
+        DirectoryInfo baseDir = new DirectoryInfo(baseABPath);
+
+        // 遍历baseABPath下的所有模块
+        DirectoryInfo[] dirs = baseDir.GetDirectories();
+        foreach (DirectoryInfo moduleDir in dirs)
+        {
+            string moduleName = moduleDir.Name;
+            ModuleABConfig baseABConfig = LoadABConfig(string.Format("{0}/{1}/{2}.json", baseABPath, moduleName, moduleName.ToLower()));
+            ModuleABConfig updateABConfig = LoadABConfig(string.Format("{0}/{1}/{2}.json", baseABPath, moduleName, moduleName.ToLower()));
+
+            // 计算出那些跟base版本相比，没有变化的bundle文件， 即需要从热更中删除的文件
+            List<BundleInfo> removeList = new List<BundleInfo>();
+            foreach (BundleInfo info in removeList)
+            {
+                string filePath = updateABPath + "/" + moduleName + "/" + info.bundle_name;
+                File.Delete(filePath);
+
+                // 同时要处理一下热更包版本里的AB资源配置文件
+                updateABConfig.BundleArray.Remove(info.bundle_name);
+            }
+
+            // 重新生成热更包的AB资源配置文件
+            string jsonPath = string.Format("{0}/{1}/{2}.json", updateABConfig, moduleName, moduleName.ToLower());
+            if (File.Exists(jsonPath) == true)
+            {
+                File.Delete(jsonPath);
+            }
+            File.Create(jsonPath).Dispose();
+
+            string jsonData = LitJson.JsonMapper.ToJson(updateABConfig);
+            File.WriteAllText(jsonPath, ConvertJsonString(jsonData));
+        }
+    }
 
     /// <summary>
-    /// 打包AssetBundle资源
+    /// 计算热更包中需要删除的bundle文件列表
     /// </summary>
-    [MenuItem("MyEditor/BuildAssetBundle")]
+    /// <param name="baseABConfig"></param>
+    /// <param name="updateABConfig"></param>
+    /// <returns></returns>
+    private static List<BundleInfo> Calculate(ModuleABConfig baseABConfig, ModuleABConfig updateABConfig)
+    {
+        // 收集所有的base版本的bundle文件，放到这个baseBundleDic字典中
+        Dictionary<string, BundleInfo> baseBundleDic = new Dictionary<string, BundleInfo>();
+        if (baseABConfig != null)
+        {
+            foreach (BundleInfo bundleInfo in baseABConfig.BundleArray.Values)
+            {
+                string uniquedId = string.Format("{0}|{1}", bundleInfo, bundleInfo.crc);
+                baseBundleDic.Add(uniquedId, bundleInfo);
+            }
+        }
+
+        // 遍历Update版本中的bundle文件，把那些需要删除的bundle放入下面的remove
+        List<BundleInfo> removeList = new List<BundleInfo>();
+        foreach (BundleInfo bundleInfo in removeList)
+        {
+            string uniquedId = string.Format("{0}|{1}", bundleInfo, bundleInfo.crc);
+            //找到那些重复的bundle文件，从removeList容器中删除
+            if (baseBundleDic.ContainsKey(uniquedId) == true)
+            {
+                removeList.Add(bundleInfo);
+            }
+        }
+
+        return removeList;
+    }
+
+    private static ModuleABConfig LoadABConfig(string abConfigPath)
+    {
+        File.ReadAllText(abConfigPath);
+        return JsonMapper.ToObject<ModuleABConfig>(File.ReadAllText(abConfigPath));
+    }
+
+    [MenuItem("ABEditor/BuildAssetBundle_Dev")]
+    public static void BuildAssetBundle_Dev()
+    {
+        abOutputPath = Application.streamingAssetsPath;
+        BuildAssetBundle();
+    }
+
     public static void BuildAssetBundle()
     {
         Debug.Log("开始 --->> 开始生成所有模块的AB包!");
         if (Directory.Exists(abOutputPath) == true)
         {
+            //string[] arr = ;
+
             //Directory.Delete(abOutputPath, true);
             Directory.GetFiles(abOutputPath).ToList<string>().ForEach(File.Delete);
             Directory.GetDirectories(abOutputPath).ToList<string>().ForEach((dirPath) => { Directory.Delete(dirPath, true); });
@@ -90,9 +187,24 @@ public class ABEditor : MonoBehaviour
             SaveModuleABConfig(moduleName);
 
             AssetDatabase.Refresh();
+
+            DeleteManifest(moduleOutputPath);
+
+            File.Delete(moduleOutputPath + "/" + moduleName);
         }
 
         Debug.Log("结束 --->> 生成所有模块的AB包!");
+    }
+
+    private static void DeleteManifest(string moduleOutputPath)
+    {
+        FileInfo[] files = new DirectoryInfo(moduleOutputPath).GetFiles();
+        foreach (FileInfo file in files) {
+            if (file.Name.EndsWith(".manifest"))
+            {
+                file.Delete();
+            }
+        }
     }
 
     /// <summary>

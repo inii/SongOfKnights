@@ -18,6 +18,8 @@ public class BundleRef
     /// </summary>
     public AssetBundle bundle;
 
+    public BaseOrUpdate baseOrUpdate;
+
     /// <summary>
     /// 这些BundleRef对象被哪些AssetRef对象依赖
     /// </summary>
@@ -27,7 +29,8 @@ public class BundleRef
     /// BundleRef构造函数
     /// </summary>
     /// <param name="info">配置信息</param>
-    public BundleRef(BundleInfo info) {
+    public BundleRef(BundleInfo info, BaseOrUpdate bou) {
         bundleInfo = info;
+        baseOrUpdate = bou;
     }
 }
